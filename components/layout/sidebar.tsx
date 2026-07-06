@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { isNavItemActive } from '@/lib/navigation'
 import { 
   House, 
   CreditCard, 
@@ -56,7 +57,7 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Primary Navigation links */}
       <nav className="flex-1 space-y-1 px-4 py-6">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+          const isActive = isNavItemActive(pathname, item.href)
           const Icon = item.icon
           return (
             <Link
@@ -85,27 +86,29 @@ export function Sidebar({ className }: SidebarProps) {
 
       {/* Floating AI Chat Trigger */}
       <div className="px-4 py-2">
-        <Link href="/chat">
-          <Button 
-            variant="default"
-            className={cn(
-              "w-full flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg hover:shadow-indigo-500/20 py-5 transition-all duration-300",
-              pathname === '/chat' && "ring-2 ring-indigo-400"
-            )}
-          >
-            <ChatCircleDots size={20} weight="fill" />
-            <span>Ask Outlay AI</span>
-          </Button>
-        </Link>
+        <Button 
+          render={<Link href="/chat" />}
+          variant="default"
+          className={cn(
+            "w-full flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg hover:shadow-indigo-500/20 py-5 transition-all duration-300",
+            pathname === '/chat' && "ring-2 ring-indigo-400"
+          )}
+        >
+          <ChatCircleDots size={20} weight="fill" />
+          <span>Ask Outlay AI</span>
+        </Button>
       </div>
 
       {/* Sidebar Footer with Sign Out */}
       <div className="border-t border-zinc-800 p-4">
         <SignOutButton>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-900 hover:text-rose-400 transition-all duration-200">
+          <Button 
+            variant="ghost"
+            className="flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-500 hover:bg-zinc-900 hover:text-rose-400 transition-all duration-200 bg-transparent border-0 hover:border-0 focus-visible:ring-0 active:translate-y-0"
+          >
             <SignOut size={20} />
             <span>Sign Out</span>
-          </button>
+          </Button>
         </SignOutButton>
       </div>
     </aside>

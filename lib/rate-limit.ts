@@ -40,6 +40,27 @@ class InMemoryRateLimiter {
 
 const devLimiter = new InMemoryRateLimiter()
 
+let redisInstance: Redis | null = null
+let ratelimitInstance: Ratelimit | null = null
+
+function getRatelimit(redisUrl: string, redisToken: string, limitCount: number, windowSeconds: number): Ratelimit {
+  if (!redisInstance) {
+    redisInstance = new Redis({
+      url: redisUrl,
+      token: redisToken,
+    })
+  }
+  if (!ratelimitInstance) {
+    ratelimitInstance = new Ratelimit({
+      redis: redisInstance,
+      limiter: Ratelimit.slidingWindow(limitCount, `${windowSeconds} s`),
+      analytics: true,
+      prefix: '@upstash/ratelimit',
+    })
+  }
+  return ratelimitInstance
+}
+
 /**
  * Checks rate limit for a key (e.g., user ID or IP address)
  * Defaults to 10 requests per minute
@@ -55,18 +76,7 @@ export async function rateLimit(
 
   if (redisUrl && redisToken && redisUrl !== 'https://placeholder.upstash.io') {
     try {
-      const redis = new Redis({
-        url: redisUrl,
-        token: redisToken,
-      })
-      
-      const ratelimit = new Ratelimit({
-        redis: redis,
-        limiter: Ratelimit.slidingWindow(limitCount, `${windowSeconds} s`),
-        analytics: true,
-        prefix: '@upstash/ratelimit',
-      })
-      
+      const ratelimit = getRatelimit(redisUrl, redisToken, limitCount, windowSeconds)
       const result = await ratelimit.limit(key)
       return {
         success: result.success,

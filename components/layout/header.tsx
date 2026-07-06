@@ -31,7 +31,7 @@ export function Header() {
         <Sheet>
           <SheetTrigger
             render={
-              <button className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 md:hidden transition-colors">
+              <button aria-label="Open navigation menu" className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 md:hidden transition-colors">
                 <List size={24} />
               </button>
             }
@@ -51,7 +51,7 @@ export function Header() {
 
       <div className="flex items-center gap-4">
         {/* Bell notification icon */}
-        <button className="relative rounded-full p-2 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 transition-colors">
+        <button aria-label="View notifications" className="relative rounded-full p-2 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 transition-colors">
           <Bell size={20} />
           {/* Notifications dot */}
           <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-2 ring-zinc-950" />

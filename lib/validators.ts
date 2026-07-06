@@ -34,7 +34,7 @@ export const BudgetSchema = z.object({
 export const GoalSchema = z.object({
   name: z.string().min(1, 'Goal name is required').max(100),
   targetAmount: z.number().int().positive('Target must be positive'),
-  currentAmount: z.number().int().nonnegative().default(0),
+  currentAmount: z.number().int().nonnegative('Current amount must be non-negative').default(0),
   deadline: z.coerce.date().optional().nullable(),
 })
 
@@ -42,9 +42,9 @@ export const GoalSchema = z.object({
 export const DebtSchema = z.object({
   name: z.string().min(1, 'Debt name is required').max(100),
   type: z.enum(['LOAN', 'CREDIT_CARD']),
-  balance: z.number().int().nonnegative('Balance must be positive'),
-  interestRate: z.number().nonnegative('Interest rate must be positive'),
-  minPayment: z.number().int().nonnegative('Minimum payment must be positive'),
+  balance: z.number().int().nonnegative('Balance must be non-negative'),
+  interestRate: z.number().nonnegative('Interest rate must be non-negative'),
+  minPayment: z.number().int().nonnegative('Minimum payment must be non-negative'),
   dueDay: z.number().int().min(1).max(31).optional().nullable(),
 })
 
@@ -57,5 +57,5 @@ export const AiTransactionParseSchema = z.object({
   date: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
-  confidence: z.number().min(0).max(1).optional().default(1.0),
+  confidence: z.number().min(0).max(1).optional().default(0.0),
 })

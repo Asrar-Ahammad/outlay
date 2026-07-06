@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { isNavItemActive } from '@/lib/navigation'
 import { 
   House, 
   Receipt, 
@@ -26,7 +27,7 @@ export function MobileNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-800 bg-zinc-950/80 backdrop-blur-lg px-2 pb-safe-bottom">
       <div className="flex h-16 items-center justify-around">
         {items.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+          const isActive = isNavItemActive(pathname, item.href)
           const Icon = item.icon
           
           if (item.isMiddle) {

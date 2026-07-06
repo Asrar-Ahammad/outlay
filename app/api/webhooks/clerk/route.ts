@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import prisma from '@/lib/prisma'
 import { DEFAULT_CATEGORIES } from '@/lib/categories'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: Request) {
   // Retrieve the webhook secret from environment variables
@@ -26,6 +27,12 @@ export async function POST(req: Request) {
     return new Response('Error occured -- no svix headers', {
       status: 400,
     })
+  }
+
+  // Apply rate limiting based on svix event ID to prevent DDoS or spam
+  const rateLimitResult = await rateLimit(`clerk-webhook-${svix_id}`, 5, 60)
+  if (!rateLimitResult.success) {
+    return new Response('Too many requests for this event', { status: 429 })
   }
 
   // Get the body
@@ -69,10 +76,16 @@ export async function POST(req: Request) {
 
       const fullName = first_name && last_name ? `${first_name} ${last_name}` : first_name || last_name || null
 
-      // Create the user and their default categories inside a database transaction
+      // Create or update the user and their default categories inside a database transaction
       await prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-          data: {
+        const user = await tx.user.upsert({
+          where: { clerkId },
+          update: {
+            email,
+            name: fullName,
+            imageUrl: image_url || null,
+          },
+          create: {
             clerkId,
             email,
             name: fullName,
@@ -80,19 +93,29 @@ export async function POST(req: Request) {
           },
         })
 
-        // Bulk insert user-specific default categories
-        await tx.category.createMany({
-          data: DEFAULT_CATEGORIES.map((cat) => ({
-            userId: user.id,
-            name: cat.name,
-            icon: cat.icon,
-            color: cat.color,
-            isDefault: true,
-          })),
-        })
+        // Idempotently create default categories for the user
+        for (const cat of DEFAULT_CATEGORIES) {
+          const existing = await tx.category.findFirst({
+            where: {
+              userId: user.id,
+              name: cat.name,
+            },
+          })
+          if (!existing) {
+            await tx.category.create({
+              data: {
+                userId: user.id,
+                name: cat.name,
+                icon: cat.icon,
+                color: cat.color,
+                isDefault: true,
+              },
+            })
+          }
+        }
       })
 
-      console.log(`Successfully synced user ${clerkId} to local DB and created default categories.`)
+      console.log(`Successfully synced user ${clerkId} to local DB (idempotent upsert).`)
     }
 
     if (eventType === 'user.updated') {
@@ -102,25 +125,40 @@ export async function POST(req: Request) {
       
       const fullName = first_name && last_name ? `${first_name} ${last_name}` : first_name || last_name || null
 
-      await prisma.user.update({
+      await prisma.user.upsert({
         where: { clerkId },
-        data: {
+        update: {
           email: email || undefined,
           name: fullName,
           imageUrl: image_url || null,
         },
+        create: {
+          clerkId,
+          email: email || '',
+          name: fullName,
+          imageUrl: image_url || null,
+        },
       })
-      console.log(`Successfully updated user ${clerkId} in local DB.`)
+      console.log(`Successfully updated/upserted user ${clerkId} in local DB.`)
     }
 
     if (eventType === 'user.deleted') {
       const { id: clerkId } = evt.data
       
-      // Cascade delete is handled by database/Prisma constraint (onDelete: Cascade)
-      await prisma.user.delete({
+      // Check if user exists before deleting to make it idempotent
+      const existingUser = await prisma.user.findUnique({
         where: { clerkId },
       })
-      console.log(`Successfully deleted user ${clerkId} from local DB.`)
+      
+      if (existingUser) {
+        // Cascade delete is handled by database/Prisma constraint (onDelete: Cascade)
+        await prisma.user.delete({
+          where: { clerkId },
+        })
+        console.log(`Successfully deleted user ${clerkId} from local DB.`)
+      } else {
+        console.log(`User ${clerkId} already deleted or not found.`)
+      }
     }
 
     return new Response('Webhook processed successfully', { status: 200 })

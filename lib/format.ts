@@ -15,21 +15,37 @@ const CURRENCY_LOCALE_MAP: Record<string, string> = {
  * @param currencyCode Three-letter currency code (e.g., 'INR', 'USD')
  */
 export function formatCurrency(amountInBaseUnits: number, currencyCode: string = 'INR'): string {
-  const locale = CURRENCY_LOCALE_MAP[currencyCode.toUpperCase()] || 'en-US'
+  let cleanCurrency = (currencyCode || 'INR').toUpperCase().trim()
+  if (cleanCurrency.length !== 3) {
+    cleanCurrency = 'INR'
+  }
+
+  const locale = CURRENCY_LOCALE_MAP[cleanCurrency] || 'en-US'
   
   // Note: JPY does not have fractional subunits (like cents).
   // But our DB stores base units as if everything has 100 subunits for consistency,
   // or we can handle zero-decimal currencies. Standard is that for zero-decimal
   // currencies, 1 base unit = 1 currency unit. Let's check JPY.
-  const isZeroDecimal = ['JPY', 'KRW', 'VND'].includes(currencyCode.toUpperCase())
+  const isZeroDecimal = ['JPY', 'KRW', 'VND'].includes(cleanCurrency)
   const divisor = isZeroDecimal ? 1 : 100
   
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits: isZeroDecimal ? 0 : 2,
-    maximumFractionDigits: isZeroDecimal ? 0 : 2,
-  }).format(amountInBaseUnits / divisor)
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: cleanCurrency,
+      minimumFractionDigits: isZeroDecimal ? 0 : 2,
+      maximumFractionDigits: isZeroDecimal ? 0 : 2,
+    }).format(amountInBaseUnits / divisor)
+  } catch (error) {
+    console.error(`Intl.NumberFormat failed for locale ${locale} and currency ${cleanCurrency}:`, error)
+    // Fallback to INR
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amountInBaseUnits / 100)
+  }
 }
 
 /**

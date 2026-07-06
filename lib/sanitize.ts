@@ -13,7 +13,9 @@ export function sanitizeHtml(input: string): string {
 
 /**
  * Sanitizes user input to mitigate LLM prompt injection risk.
- * Strips common injection patterns, system overrides, and characters.
+ * NOTE: This is a first-pass heuristic filter and not a complete safeguard.
+ * Downstream systems MUST enforce a strict separation of system instructions
+ * from user data and validate all model outputs using schemas (e.g. Zod).
  */
 export function sanitizeLlmPrompt(input: string): string {
   if (!input) return ''

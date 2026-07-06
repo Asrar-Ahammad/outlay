@@ -27,8 +27,8 @@ export async function logAudit({
         action,
         entity,
         entityId,
-        oldValue: oldValue ? JSON.parse(JSON.stringify(oldValue)) : null,
-        newValue: newValue ? JSON.parse(JSON.stringify(newValue)) : null,
+        oldValue: oldValue !== undefined && oldValue !== null ? JSON.parse(JSON.stringify(oldValue)) : null,
+        newValue: newValue !== undefined && newValue !== null ? JSON.parse(JSON.stringify(newValue)) : null,
       },
     })
   } catch (error) {

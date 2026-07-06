@@ -1,3 +1,4 @@
+import 'server-only'
 import { 
   S3Client, 
   PutObjectCommand, 
@@ -13,6 +14,12 @@ const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME
 
 // Initialize R2 client using standard S3 compatibility layer
 const getR2Client = (): S3Client => {
+  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY environment variables are required in production')
+    }
+  }
+
   // Safe fail for build time in dev environments
   const accountId = R2_ACCOUNT_ID || 'placeholder'
   const accessKeyId = R2_ACCESS_KEY_ID || 'placeholder'

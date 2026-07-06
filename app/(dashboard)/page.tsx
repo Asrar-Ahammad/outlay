@@ -58,18 +58,21 @@ export default async function DashboardPage() {
 
         {/* Quick Add Buttons */}
         <div className="flex items-center gap-3">
-          <Link href="/transactions?add=true">
-            <Button className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg hover:shadow-indigo-500/20 flex items-center gap-1.5 font-medium transition-all duration-200">
-              <Plus size={18} weight="bold" />
-              <span>Add Transaction</span>
-            </Button>
-          </Link>
-          <Link href="/chat">
-            <Button variant="outline" className="border-zinc-800 hover:bg-zinc-900 text-zinc-300 hover:text-zinc-100 flex items-center gap-1.5 font-medium transition-all duration-200">
-              <Sparkle size={18} weight="fill" className="text-indigo-400" />
-              <span>Ask AI Advisor</span>
-            </Button>
-          </Link>
+          <Button 
+            render={<Link href="/transactions?add=true" />} 
+            className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg hover:shadow-indigo-500/20 flex items-center gap-1.5 font-medium transition-all duration-200"
+          >
+            <Plus size={18} weight="bold" />
+            <span>Add Transaction</span>
+          </Button>
+          <Button 
+            render={<Link href="/chat" />} 
+            variant="outline" 
+            className="border-zinc-800 hover:bg-zinc-900 text-zinc-300 hover:text-zinc-100 flex items-center gap-1.5 font-medium transition-all duration-200"
+          >
+            <Sparkle size={18} weight="fill" className="text-indigo-400" />
+            <span>Ask AI Advisor</span>
+          </Button>
         </div>
       </div>
 
