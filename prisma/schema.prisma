@@ -1,0 +1,230 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  clerkId             String   @unique
+  email               String   @unique
+  name                String?
+  imageUrl            String?
+  currency            String   @default("INR")
+  dailyAiCalls        Int      @default(0)
+  dailyAiCallsResetAt DateTime @default(now())
+  pinHash             String?  // PIN lock
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  accounts             Account[]
+  transactions         Transaction[]
+  categories           Category[]
+  budgets              Budget[]
+  goals                Goal[]
+  debts                Debt[]
+  moodLogs             MoodLog[]
+  recurringTransactions RecurringTransaction[]
+  auditLogs            AuditLog[]
+  merchantCache        MerchantCache[]
+}
+
+model Account {
+  id           String      @id @default(cuid())
+  userId       String
+  name         String
+  type         AccountType
+  balance      Int         @default(0) // base currency units (e.g. paise/cents)
+  encryptedRef String?     // AES-256 encrypted account number/reference
+  isDefault    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  userId        String
+  accountId     String
+  amount        Int               // amount in base currency units (e.g. paise/cents). positive=income, negative=expense (or vice versa - usually absolute amount or signed, let's keep absolute amount and rely on transaction type, or use signed. Let's use absolute amount and rely on type for income/expense)
+  type          TransactionType
+  categoryId    String?
+  merchant      String?
+  merchantClean String?           // enriched merchant name
+  date          DateTime
+  notes         String?
+  tags          String[]          // Postgres string array
+  receiptUrl    String?           // R2 signed URL key
+  isRecurring   Boolean           @default(false)
+  isDuplicate   Boolean           @default(false)
+  confidence    Float?            // AI parse confidence
+  source        TransactionSource
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account  Account   @relation(fields: [accountId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  moodLog  MoodLog?
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  userId       String
+  name         String
+  icon         String?       // Phosphor icon name
+  color        String?       // Hex color code or Tailwind color
+  isDefault    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model Budget {
+  id           String   @id @default(cuid())
+  userId       String
+  categoryId   String
+  monthlyLimit Int      // paise/cents
+  month        Int      // 1-12
+  year         Int
+  createdAt    DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId, month, year])
+}
+
+model Goal {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  targetAmount  Int       // paise/cents
+  currentAmount Int       @default(0)
+  deadline      DateTime?
+  isCompleted   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Debt {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  type          DebtType // LOAN, CREDIT_CARD
+  balance       Int      // outstanding balance
+  interestRate  Float    // annual interest rate as percentage
+  minPayment    Int      // minimum monthly payment
+  dueDay        Int?     // due day of the month
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RecurringTransaction {
+  id          String    @id @default(cuid())
+  userId      String
+  merchant    String
+  amount      Int       // paise/cents
+  categoryId  String?
+  frequency   Frequency
+  nextDueDate DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MoodLog {
+  id            String   @id @default(cuid())
+  userId        String
+  transactionId String   @unique
+  mood          Mood
+  note          String?
+  createdAt     DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+model MerchantCache {
+  id         String   @id @default(cuid())
+  userId     String
+  rawName    String
+  cleanName  String
+  logoUrl    String?
+  categoryId String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, rawName])
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  userId    String
+  action    AuditAction
+  entity    String      // e.g. "Transaction", "Account"
+  entityId  String
+  oldValue  Json?
+  newValue  Json?
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum AccountType {
+  CASH
+  CARD
+  UPI
+  WALLET
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionSource {
+  MANUAL
+  NL_PARSE
+  VISION
+  CSV_IMPORT
+}
+
+enum DebtType {
+  LOAN
+  CREDIT_CARD
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum Mood {
+  HAPPY
+  NEUTRAL
+  REGRET
+  IMPULSE
+  STRESSED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
